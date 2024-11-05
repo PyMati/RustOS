@@ -1,0 +1,2 @@
+set PATH="D:\MSYS\ucrt64\bin:$PATH"
+qemu-system-x86_64 -drive format=raw,file=target/os_spec/debug/bootimage-rustos.bin
