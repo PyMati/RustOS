@@ -12,24 +12,25 @@ pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
     rustos::init();
-    x86_64::instructions::interrupts::int3();
 
     // Testing purposes of double fault
-    unsafe {
-        *(0xdeadbeef as *mut u8) = 42;
-    };
+    // unsafe {
+    //     *(0xdeadbeef as *mut u8) = 42;
+    // };
+    // Testing purposes for single fault
+    // x86_64::instructions::interrupts::int3();
 
     #[cfg(test)]
     test_main();
 
-    loop {}
+    rustos::htl_loop();
 }
 
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
-    loop {}
+    rustos::htl_loop();
 }
 
 #[cfg(test)]
