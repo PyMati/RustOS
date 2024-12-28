@@ -14,6 +14,11 @@ pub extern "C" fn _start() -> ! {
     rustos::init();
     x86_64::instructions::interrupts::int3();
 
+    // Testing purposes of double fault
+    unsafe {
+        *(0xdeadbeef as *mut u8) = 42;
+    };
+
     #[cfg(test)]
     test_main();
 
