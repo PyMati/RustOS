@@ -6,9 +6,15 @@
 
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
-use rustos::println;
+use rustos::{allocator, println};
 use x86_64::structures::paging::{PageTable, Translate};
 use x86_64::VirtAddr;
+extern crate alloc;
+use alloc::boxed::Box;
+
+use rustos::memory;
+use rustos::memory::BootInfoFrameAllocator;
+use x86_64::structures::paging::Page;
 
 entry_point!(kernel_main);
 
@@ -48,25 +54,10 @@ fn read_and_traverse_l4_table(boot_info: &'static BootInfo) {
     }
 }
 
-fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    println!("Hello World{}", "!");
-
-    rustos::init();
-
-    // random_double_fault();
-    // read_and_traverse_l4_table(boot_info);
-    use rustos::memory;
-    use rustos::memory::BootInfoFrameAllocator;
-    use x86_64::structures::paging::Page;
+fn translate_adderesses(boot_info: &'static BootInfo) {
     let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
     let mut mapper = unsafe { memory::init(phys_mem_offset) };
     let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
-
-    let page = Page::containing_address(VirtAddr::new(0));
-    memory::create_example_mapping(page, &mut mapper, &mut frame_allocator);
-
-    let page_ptr: *mut u64 = page.start_address().as_mut_ptr();
-    unsafe { page_ptr.offset(400).write_volatile(0x_f021_f077_f065_f04e) };
 
     let addresses = [
         // the identity-mapped vga buffer page
@@ -84,18 +75,41 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         let phys = mapper.translate_addr(virt);
         println!("{:?} -> {:?}", virt, phys);
     }
+}
+
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    println!("Hello World{}", "!");
+
+    rustos::init();
+
+    // Example allocator test
+
+    // random_double_fault();
+    // read_and_traverse_l4_table(boot_info);
+    // translate_adderesses(boot_info);
+
+    let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
+    let mut mapper = unsafe { memory::init(phys_mem_offset) };
+    let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
+
+    allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap initialization failed");
+
+    // let page_ptr: *mut u64 = page.start_address().as_mut_ptr();
+    // unsafe { page_ptr.offset(400).write_volatile(0x_f021_f077_f065_f04e) };
+    let x = Box::new(4);
+    println!("{:p}", x);
 
     #[cfg(test)]
     test_main();
 
-    rustos::htl_loop();
+    rustos::hlt();
 }
 
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
-    rustos::htl_loop();
+    rustos::hlt();
 }
 
 #[cfg(test)]

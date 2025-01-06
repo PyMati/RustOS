@@ -7,6 +7,7 @@
 
 use core::panic::PanicInfo;
 
+pub mod allocator;
 pub mod gdt;
 pub mod interrupts;
 pub mod memory;
@@ -14,6 +15,7 @@ pub mod serial;
 pub mod vga_buffer;
 #[cfg(test)]
 use bootloader::{entry_point, BootInfo};
+extern crate alloc;
 
 pub fn init() {
     gdt::init();
@@ -48,7 +50,7 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
     serial_println!("[failed]\n");
     serial_println!("Error: {}\n", info);
     exit_qemu(QemuExitCode::Failed);
-    htl_loop();
+    hlt();
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -67,7 +69,7 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
     }
 }
 
-pub fn htl_loop() -> ! {
+pub fn hlt() -> ! {
     loop {
         x86_64::instructions::hlt();
     }
@@ -80,7 +82,7 @@ entry_point!(test_kernel);
 fn test_kernel(boot_info: &'static BootInfo) -> ! {
     init();
     test_main();
-    htl_loop();
+    hlt();
 }
 
 #[cfg(test)]
