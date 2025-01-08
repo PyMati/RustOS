@@ -9,6 +9,9 @@ use x86_64::{
 };
 
 pub struct ExampleAllocator;
+pub mod bump;
+
+use bump::BmpAlloc;
 
 pub const HEAP_START: usize = 0x_4444_4444_4444;
 pub const HEAP_SIZE: usize = 100 * 1024; // 100 KiB
@@ -24,8 +27,10 @@ unsafe impl GlobalAlloc for ExampleAllocator {
     }
 }
 
+// #[global_allocator]
+// static ALLOCATOR: LockedHeap = LockedHeap::empty();
 #[global_allocator]
-static ALLOCATOR: LockedHeap = LockedHeap::empty();
+static ALLOCATOR: MutexWrapper<BmpAlloc> = MutexWrapper::new(BmpAlloc::new());
 
 pub fn init_heap(
     mapper: &mut impl Mapper<Size4KiB>,
@@ -52,4 +57,29 @@ pub fn init_heap(
     }
 
     Ok(())
+}
+
+pub struct MutexWrapper<A> {
+    inner: spin::Mutex<A>,
+}
+
+impl<A> MutexWrapper<A> {
+    pub const fn new(inner: A) -> Self {
+        MutexWrapper {
+            inner: spin::Mutex::new(inner),
+        }
+    }
+
+    pub fn lock(&self) -> spin::MutexGuard<A> {
+        self.inner.lock()
+    }
+}
+
+fn align_up(addr: usize, align: usize) -> usize {
+    let remainder = addr % align;
+    if remainder == 0 {
+        addr
+    } else {
+        addr - remainder + align
+    }
 }
