@@ -1,6 +1,8 @@
 use alloc::alloc::{GlobalAlloc, Layout};
 use core::ptr::null_mut;
-use linked_list_allocator::LockedHeap;
+use fixed::FixedSizeBlockAllocator;
+use list::LinkedListAllocator;
+// use linked_list_allocator::LockedHeap;
 use x86_64::{
     structures::paging::{
         mapper::MapToError, FrameAllocator, Mapper, Page, PageTableFlags, Size4KiB,
@@ -10,6 +12,8 @@ use x86_64::{
 
 pub struct ExampleAllocator;
 pub mod bump;
+pub mod fixed;
+pub mod list;
 
 use bump::BmpAlloc;
 
@@ -29,8 +33,14 @@ unsafe impl GlobalAlloc for ExampleAllocator {
 
 // #[global_allocator]
 // static ALLOCATOR: LockedHeap = LockedHeap::empty();
+// #[global_allocator]
+// static ALLOCATOR: MutexWrapper<BmpAlloc> = MutexWrapper::new(BmpAlloc::new());
+// #[global_allocator]
+// static ALLOCATOR: MutexWrapper<LinkedListAllocator> = MutexWrapper::new(LinkedListAllocator::new());
+
 #[global_allocator]
-static ALLOCATOR: MutexWrapper<BmpAlloc> = MutexWrapper::new(BmpAlloc::new());
+static ALLOCATOR: MutexWrapper<FixedSizeBlockAllocator> =
+    MutexWrapper::new(FixedSizeBlockAllocator::new());
 
 pub fn init_heap(
     mapper: &mut impl Mapper<Size4KiB>,
