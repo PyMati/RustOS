@@ -11,6 +11,8 @@ use x86_64::structures::paging::{PageTable, Translate};
 use x86_64::VirtAddr;
 extern crate alloc;
 use alloc::boxed::Box;
+use rustos::async_task::kb;
+use rustos::async_task::{executor::Executor, executor::SimpleExecutor, Task};
 
 use rustos::memory;
 use rustos::memory::BootInfoFrameAllocator;
@@ -99,6 +101,11 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     let x = Box::new(4);
     println!("{:p}", x);
 
+    let mut executor = Executor::new();
+    executor.spawn(Task::new(example_task()));
+    executor.spawn(Task::new(kb::print_keypresses()));
+    executor.run();
+
     #[cfg(test)]
     test_main();
 
@@ -116,4 +123,13 @@ fn panic(info: &PanicInfo) -> ! {
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     rustos::test_panic_handler(info)
+}
+
+async fn async_number() -> u32 {
+    42
+}
+
+async fn example_task() {
+    let number = async_number().await;
+    println!("async number: {}", number);
 }
