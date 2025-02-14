@@ -61,7 +61,7 @@ impl InterruptIndex {
 }
 
 extern "x86-interrupt" fn timer_exception_handler(_stack_frame: InterruptStackFrame) {
-    print!(".");
+    // print!("."); # TODO: Uncomment
     unsafe {
         PICS.lock()
             .notify_end_of_interrupt(InterruptIndex::Timer.as_u8());
